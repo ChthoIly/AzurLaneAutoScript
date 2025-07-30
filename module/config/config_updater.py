@@ -452,11 +452,48 @@ class ConfigGenerator:
                             insert(task)
 
         for task in EVENTS + GEMS_FARMINGS + WAR_ARCHIVES + RAIDS + COALITIONS:
-            options = deep_get(self.args, keys=f'{task}.Campaign.Event.option')
-            # Remove campaign_main from event list
-            options = [option for option in options if option != 'campaign_main']
-            # Sort options
-            options = sorted(options)
+            # Get all events that should be in this task category
+            task_events = []
+            for event in self.event:
+                should_include = False
+                if event.is_raid and task in RAIDS:
+                    should_include = True
+                elif event.is_war_archives and task in WAR_ARCHIVES:
+                    should_include = True
+                elif event.is_coalition and task in COALITIONS:
+                    should_include = True
+                elif not (event.is_raid or event.is_war_archives or event.is_coalition) and task in EVENTS + GEMS_FARMINGS:
+                    should_include = True
+                
+                if should_include:
+                    # Check if this event has a name for any server
+                    has_name = any(event.__getattribute__(server) for server in ARCHIVES_PREFIX.keys())
+                    if has_name:
+                        task_events.append(event)
+            
+            # Sort events by aired date (newest first)
+            task_events.sort(key=lambda x: x.date, reverse=True)
+            
+            # For each server, find the latest N available events
+            LATEST_EVENT_COUNT = 2  # Change this number to show more latest events
+            all_latest_events = set()
+            
+            for server in ARCHIVES_PREFIX.keys():
+                server_events = [event for event in task_events if event.__getattribute__(server)]
+                latest_server_events = server_events[:LATEST_EVENT_COUNT]
+                all_latest_events.update(latest_server_events)
+            
+            # Convert back to sorted list by date (newest first)
+            latest_events_list = sorted(all_latest_events, key=lambda x: x.date, reverse=True)
+            
+            # Extract unique directory names from latest events (preserve date order)
+            options = []
+            seen_directories = set()
+            for event in latest_events_list:
+                if str(event) not in seen_directories:
+                    options.append(str(event))
+                    seen_directories.add(str(event))
+            
             deep_set(self.args, keys=f'{task}.Campaign.Event.option', value=options)
             # Sort latest
             latest = {}
@@ -640,11 +677,20 @@ class ConfigUpdater:
         server = to_server(deep_get(new, 'Alas.Emulator.PackageName', 'cn'))
         if not is_template:
             for task in EVENTS + RAIDS + COALITIONS:
-                deep_set(new,
-                         keys=f'{task}.Campaign.Event',
-                         value=deep_get(self.args, f'{task}.Campaign.Event.{server}'))
+                current_event = deep_get(new, keys=f'{task}.Campaign.Event', default='campaign_main')
+                # Only validate and update non-main campaign events
+                available_events = deep_get(self.args, f'{task}.Campaign.Event.option', default=[])
+                # If current event is not in available options, update to latest event for this server
+                if current_event not in available_events:
+                    deep_set(new,
+                             keys=f'{task}.Campaign.Event',
+                             value=deep_get(self.args, f'{task}.Campaign.Event.{server}'))
             for task in ['GemsFarming']:
-                if deep_get(new, keys=f'{task}.Campaign.Event', default='campaign_main') != 'campaign_main':
+                current_event = deep_get(new, keys=f'{task}.Campaign.Event', default='campaign_main')
+                # Only validate and update non-main campaign events
+                available_events = deep_get(self.args, f'{task}.Campaign.Event.option', default=[])
+                # If current event is not in available options, update to latest event for this server
+                if current_event not in available_events:
                     deep_set(new,
                              keys=f'{task}.Campaign.Event',
                              value=deep_get(self.args, f'{task}.Campaign.Event.{server}'))

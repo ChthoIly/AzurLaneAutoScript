@@ -338,7 +338,46 @@ class AlasGUI(Frame):
             # Default value
             output_kwargs["value"] = value
             # Options
-            output_kwargs["options"] = options = output_kwargs.pop("option", [])
+            options = output_kwargs.pop("option", [])
+            
+            # Filter event options based on current server for Campaign.Event
+            if group_name == "Campaign" and arg_name == "Event":
+                from module.config.server import to_server
+                from module.config.config_updater import ConfigGenerator
+                
+                # Get current server from config
+                current_server = to_server(deep_get(config, ['Alas', 'Emulator', 'PackageName'], 'cn'))
+                
+                # Filter options to show only events available for current server
+                filtered_options = []
+                try:
+                    # Get event information
+                    config_generator = ConfigGenerator()
+                    events = config_generator.event
+                    
+                    # For each option, check if it's available for current server
+                    for opt in options:
+                        # Check if this is an event directory
+                        matching_event = None
+                        for event in events:
+                            if str(event) == opt:
+                                matching_event = event
+                                break
+                        
+                        if matching_event:
+                            # Check if event has name for current server
+                            if matching_event.__getattribute__(current_server):
+                                filtered_options.append(opt)
+                        else:
+                            # Keep non-event options (like campaign_main)
+                            filtered_options.append(opt)
+                    
+                    options = filtered_options
+                except Exception:
+                    # If filtering fails, use original options
+                    pass
+            
+            output_kwargs["options"] = options
             # Options label
             options_label = []
             for opt in options:
