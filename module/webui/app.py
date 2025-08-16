@@ -310,6 +310,36 @@ class AlasGUI(Frame):
             if self.set_group(group, arg_dict, config, task):
                 self.set_navigator(group)
 
+    def filter_event_options(self, task, group_name, arg_name, options, config):
+        """
+        Filter options based on specific criteria.
+        This method can be extended to handle various filtering scenarios.
+        
+        Args:
+            task (str): Current task name
+            group_name (str): Group name
+            arg_name (str): Argument name
+            options (list): Original options list
+            config (dict): Current configuration
+            
+        Returns:
+            list: Filtered options list
+        """
+        EVENTS = ['Event', 'Event2', 'EventA', 'EventB', 'EventC', 'EventD', 'EventSp']
+        # Filter Campaign.Event options based on server
+        if task in EVENTS and group_name == 'Campaign' and arg_name == 'Event':
+            try:
+                server = to_server(deep_get(config, ['Alas', 'Emulator', 'PackageName'], 'cn'))
+                available_events = deep_get(self.ALAS_ARGS, keys=f'{task}.Campaign.Event.option_{server}')
+                # Handle both list and string format
+                if isinstance(available_events, list):
+                    return [opt for opt in options if opt in available_events]
+                else:
+                    return [opt for opt in options if opt == available_events]
+            except Exception:
+                pass
+        return options
+
     @use_scope("groups")
     def set_group(self, group, arg_dict, config, task):
         group_name = group[0]
