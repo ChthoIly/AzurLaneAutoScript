@@ -21,7 +21,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Add upstream
-        run: git remote add upstream https://github.com/原作者/仓库名.git
+        run: git remote add upstream https://github.com/LmeSzinc/AzurLaneAutoScript.git
 
       - name: Fetch upstream
         run: git fetch upstream
