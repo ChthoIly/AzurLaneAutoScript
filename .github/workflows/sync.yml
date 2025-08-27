@@ -1,8 +1,8 @@
-name: Sync with upstream
+name: Daily Sync with Upstream
 
 on:
   schedule:
-    - cron: '0 16,20,0,4,8,12 * * *'   # 北京时间0点开始每4小时运行一次（UTC+8）
+    - cron: '0 0 * * *'   # 北京时间0点开始每天运行一次
   workflow_dispatch:       # 允许手动触发
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.AlasGithubActionPAT }}
           fetch-depth: 0
 
       - name: Set Git
