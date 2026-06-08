@@ -12,7 +12,7 @@ jobs:
       - name: Checkout fork
         uses: actions/checkout@v4
         with:
-          persist-credentials: false   # 用 PAT 来推送
+          persist-credentials: false   # 用 GITHUB_TOKEN 推送
           fetch-depth: 0               # 必须拿完整历史才能 rebase
 
       - name: Set up Git
@@ -32,7 +32,7 @@ jobs:
 
       - name: Push changes
         run: |
-          git remote set-url origin https://x-access-token:${{ secrets.AlasGithubActionPAT }}@github.com/${{ github.repository }}.git
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push origin main --force-with-lease
         env:
-          GITHUB_TOKEN: ${{ secrets.AlasGithubActionPAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
