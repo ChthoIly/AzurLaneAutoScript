@@ -173,11 +173,13 @@ class ConfigGenerator:
         # Construct args
         data = {}
         # Add dashboard to args
-        dashboard_and_task = {**self.dashboard,**self.task}
-        for path, groups in deep_iter(dashboard_and_task, depth=3):
-            if 'tasks' not in path and 'Dashboard' not in path:
+        # dashboard.yaml is `Dashboard: [group, ...]`, which deep_iter(depth=3) can't reach
+        task_groups = list(self.dashboard.items())
+        for path, groups in deep_iter(self.task, depth=3):
+            if 'tasks' not in path:
                 continue
-            task = path[2] if 'tasks' in path else path[0]
+            task_groups.append((path[2], groups))
+        for task, groups in task_groups:
             # Add storage to all task
             groups.append('Storage')
             for group in groups:
