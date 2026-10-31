@@ -14,10 +14,12 @@ from module.ocr.ocr import Digit, Ocr
 from module.ui.ui import UI
 from module.log_res.log_res import LogRes
 
-#if server.server != 'jp':
-#    OCR_COIN = Digit(OCR_COIN, name='OCR_COIN', letter=(239, 239, 239), threshold=128)
-#else:
-#    OCR_COIN = Digit(OCR_COIN, name='OCR_COIN', letter=(201, 201, 201), threshold=128)
+# Keep the raw button for dashboard OCR, OCR_COIN is imported as Digit by gacha and shipyard
+OCR_COIN_BUTTON = OCR_COIN
+if server.server != 'jp':
+    OCR_COIN = Digit(OCR_COIN, name='OCR_COIN', letter=(239, 239, 239), threshold=128)
+else:
+    OCR_COIN = Digit(OCR_COIN, name='OCR_COIN', letter=(201, 201, 201), threshold=128)
 
 
 class PtOcr(Ocr):
@@ -83,7 +85,7 @@ class CampaignStatus(UI):
                 break
 
             _coin = {
-                'Value': self._get_num(OCR_COIN, 'OCR_COIN'),
+                'Value': self._get_num(OCR_COIN_BUTTON, 'OCR_COIN'),
                 'Limit': self._get_num(OCR_COIN_LIMIT, 'OCR_COIN_LIMIT')
             }
             if _coin['Value'] >= 100:
