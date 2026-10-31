@@ -2,16 +2,29 @@ name: Daily Automatic Rebase Fork onto Upstream master branch
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # 每天检查一次
+    - cron: '0 0 * * *'   # 每天检查一次（UTC 0 点，即北京时间 8 点）
   workflow_dispatch:       # 允许手动触发
+
+permissions:
+  contents: write          # 用 GITHUB_TOKEN 推送需要写权限
 
 jobs:
   rebase:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false     # 一个分支冲突不影响另一个分支
+      matrix:
+        include:
+          # main: 原版 -> 我的 fork
+          - branch: main
+          # dashboard: 原版 -> 资源监控 -> 我的 fork
+          - branch: dashboard
+            verify-config: true
     steps:
       - name: Checkout fork
         uses: actions/checkout@v4
         with:
+          ref: ${{ matrix.branch }}
           persist-credentials: false   # 用 GITHUB_TOKEN 推送
           fetch-depth: 0               # 必须拿完整历史才能 rebase
 
@@ -27,12 +40,35 @@ jobs:
 
       - name: Rebase onto upstream/master
         run: |
-          git checkout main
-          git rebase upstream/master || (git rebase --abort && exit 0)
+          if ! git rebase upstream/master; then
+            # 有冲突时放弃本次 rebase，不推送，让任务失败以便收到通知
+            echo "::error::${{ matrix.branch }} 与上游冲突，本次未更新，需要手动 rebase。冲突文件："
+            git diff --name-only --diff-filter=U
+            git rebase --abort
+            exit 1
+          fi
+
+      - name: Set up Python
+        if: matrix.verify-config
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify generated config
+        if: matrix.verify-config
+        run: |
+          # 重新生成 args.json / template.json / i18n 等，确认合并后的结果仍包含 Dashboard 且与源 yaml 一致
+          pip install -q pyyaml cached_property
+          python -m module.config.config_updater > /dev/null
+          if ! git diff --exit-code --stat; then
+            echo "::error::rebase 后生成的配置文件与源文件不一致，本次未更新，需要手动处理"
+            exit 1
+          fi
+          python -c "import json; assert 'Dashboard' in json.load(open('module/config/argument/args.json', encoding='utf-8'))"
 
       - name: Push changes
         run: |
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git push origin main --force-with-lease
+          git push origin ${{ matrix.branch }} --force-with-lease
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
