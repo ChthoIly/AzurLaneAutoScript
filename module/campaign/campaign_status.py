@@ -70,7 +70,7 @@ class CampaignStatus(UI):
         Returns:
             int: Coin amount
         """
-        _coin = {}
+        _coin = {'Value': 0, 'Limit': 0}
         timeout = Timer(1, count=2).start()
         while 1:
             if skip_first_screenshot:
@@ -88,7 +88,9 @@ class CampaignStatus(UI):
             }
             if _coin['Value'] >= 100:
                 break
-        LogRes(self.config).Coin = _coin
+        # Don't record failed OCR results to dashboard
+        if _coin['Value'] > 0:
+            LogRes(self.config).Coin = _coin
         if update:
             self.config.update()
 
@@ -139,7 +141,7 @@ class CampaignStatus(UI):
         Returns:
             int: Oil amount
         """
-        _oil = {}
+        _oil = {'Value': 0, 'Limit': 0}
         timeout = Timer(1, count=2).start()
         while 1:
             if skip_first_screenshot:
@@ -147,13 +149,13 @@ class CampaignStatus(UI):
             else:
                 self.device.screenshot()
 
-            if not self.appear(OCR_OIL_CHECK, offset=(10, 2)):
-                logger.info('No oil icon')
-                self.device.sleep(1)
-
             if timeout.reached():
                 logger.warning('Get oil timeout')
                 break
+
+            if not self.appear(OCR_OIL_CHECK, offset=(10, 2)):
+                logger.info('No oil icon')
+                continue
 
             _oil = {
                 'Value': self._get_num(OCR_OIL, 'OCR_OIL'),
@@ -161,7 +163,9 @@ class CampaignStatus(UI):
             }
             if _oil['Value'] >= 100:
                 break
-        LogRes(self.config).Oil = _oil
+        # Don't record failed OCR results to dashboard
+        if _oil['Value'] > 0:
+            LogRes(self.config).Oil = _oil
         if update:
             self.config.update()
 
